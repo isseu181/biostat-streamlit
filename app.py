@@ -56,6 +56,16 @@ if menu == "Visualisations":
     st.header("Visualisations")
     if 'data' in st.session_state:
         data = st.session_state['data']
+        
+        # Graphique countplot pour analyser la relation entre traitement et évolution
+        if 'Traitement' in data.columns and 'Evolution' in data.columns:
+            st.subheader("Analyse de la relation entre traitement et évolution")
+            fig, ax = plt.subplots()
+            sns.countplot(x='Traitement', hue='Evolution', data=data, ax=ax)
+            ax.set_title("Évolution par type de traitement")
+            ax.legend(title='Évolution', labels=['Vivant (0)', 'Décès (1)'])
+            st.pyplot(fig)
+        
         numeric_columns = data.select_dtypes(include=np.number).columns.tolist()
         col = st.selectbox("Sélectionnez une colonne numérique pour l'histogramme", numeric_columns)
         if col:
