@@ -7,48 +7,55 @@ import streamlit as st
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import classification_report, roc_curve, auc, confusion_matrix
+from sklearn.metrics import classification_report, roc_curve, auc
 
 # Titre de l'application
 st.title("Analyse Biostatistique avec Streamlit")
 st.sidebar.header("Navigation")
 menu = st.sidebar.radio("Étapes", [
-    "Configuration et importation",
     "Chargement des données",
     "Exploration et prétraitement",
     "Visualisations",
     "Préparation pour la modélisation",
     "Modélisation",
-    "Comparaison des modèles",
     "Courbes ROC"
 ])
 
-# Chargement des données
+# Section : Chargement des données
 if menu == "Chargement des données":
     st.header("Chargement des données")
     uploaded_file = st.file_uploader("Téléversez un fichier Excel", type=["xlsx"])
     if uploaded_file:
-        data = pd.read_excel(uploaded_file, header=1)
-        st.write("Aperçu des données chargées :")
-        st.write(data.head())
+        try:
+            # Lire les données Excel
+            data = pd.read_excel(uploaded_file, header=1)
+            st.session_state['data'] = data
+            st.success("Données chargées avec succès !")
+            st.write("Dimensions des données :", data.shape)
+            st.write("Aperçu des données :")
+            st.write(data.head())
+        except Exception as e:
+            st.error(f"Erreur lors du chargement des données : {e}")
     else:
-        st.warning("Veuillez téléverser un fichier Excel.")
+        st.warning("Veuillez téléverser un fichier Excel pour continuer.")
 
-# Exploration et prétraitement des données
+# Section : Exploration et prétraitement des données
 if menu == "Exploration et prétraitement":
     st.header("Exploration et prétraitement")
-    if 'data' in locals():
+    if 'data' in st.session_state:
+        data = st.session_state['data']
         st.write("Résumé statistique :")
         st.write(data.describe())
         st.write("Valeurs manquantes :")
         st.write(data.isnull().sum())
     else:
-        st.warning("Veuillez d'abord charger les données.")
+        st.warning("Veuillez d'abord charger les données dans la section 'Chargement des données'.")
 
-# Visualisations
+# Section : Visualisations
 if menu == "Visualisations":
     st.header("Visualisations")
-    if 'data' in locals():
+    if 'data' in st.session_state:
+        data = st.session_state['data']
         numeric_columns = data.select_dtypes(include=np.number).columns.tolist()
         col = st.selectbox("Sélectionnez une colonne numérique pour l'histogramme", numeric_columns)
         if col:
@@ -57,28 +64,38 @@ if menu == "Visualisations":
             sns.histplot(data[col], kde=True, ax=ax)
             st.pyplot(fig)
     else:
-        st.warning("Veuillez d'abord charger les données.")
+        st.warning("Veuillez d'abord charger les données dans la section 'Chargement des données'.")
 
-# Préparation des données pour la modélisation
+# Section : Préparation des données pour la modélisation
 if menu == "Préparation pour la modélisation":
     st.header("Préparation des données pour la modélisation")
-    if 'data' in locals():
+    if 'data' in st.session_state:
+        data = st.session_state['data']
         target = st.selectbox("Sélectionnez la variable cible (y)", data.columns)
         features = st.multiselect("Sélectionnez les variables explicatives (X)", data.columns)
         if target and features:
             X = data[features]
             y = data[target]
             X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+            st.session_state['X_train'] = X_train
+            st.session_state['X_test'] = X_test
+            st.session_state['y_train'] = y_train
+            st.session_state['y_test'] = y_test
             st.success("Données préparées pour la modélisation.")
         else:
             st.warning("Veuillez sélectionner la cible et les variables explicatives.")
     else:
-        st.warning("Veuillez d'abord charger les données.")
+        st.warning("Veuillez d'abord charger les données dans la section 'Chargement des données'.")
 
-# Modélisation
+# Section : Modélisation
 if menu == "Modélisation":
     st.header("Modélisation")
-    if 'X_train' in locals() and 'y_train' in locals():
+    if 'X_train' in st.session_state and 'y_train' in st.session_state:
+        X_train = st.session_state['X_train']
+        X_test = st.session_state['X_test']
+        y_train = st.session_state['y_train']
+        y_test = st.session_state['y_test']
+        
         # Régression logistique
         log_model = LogisticRegression()
         log_model.fit(X_train, y_train)
@@ -96,12 +113,15 @@ if menu == "Modélisation":
         st.subheader("Forêt Aléatoire")
         st.write(classification_report(y_test, y_pred_rf))
     else:
-        st.warning("Veuillez préparer les données pour la modélisation.")
+        st.warning("Veuillez préparer les données dans la section 'Préparation pour la modélisation'.")
 
-# Comparaison des modèles et Courbes ROC
+# Section : Courbes ROC
 if menu == "Courbes ROC":
     st.header("Courbes ROC")
-    if 'X_test' in locals() and 'y_test' in locals():
+    if 'X_test' in st.session_state and 'y_test' in st.session_state:
+        X_test = st.session_state['X_test']
+        y_test = st.session_state['y_test']
+        
         # Régression Logistique ROC
         y_prob_log = log_model.predict_proba(X_test)[:, 1]
         fpr_log, tpr_log, _ = roc_curve(y_test, y_prob_log)
@@ -112,7 +132,7 @@ if menu == "Courbes ROC":
         fpr_rf, tpr_rf, _ = roc_curve(y_test, y_prob_rf)
         roc_auc_rf = auc(fpr_rf, tpr_rf)
 
-        # Plot
+        # Affichage des courbes ROC
         fig, ax = plt.subplots()
         ax.plot(fpr_log, tpr_log, label=f"Régression Logistique (AUC = {roc_auc_log:.2f})", color='blue')
         ax.plot(fpr_rf, tpr_rf, label=f"Forêt Aléatoire (AUC = {roc_auc_rf:.2f})", color='green')
