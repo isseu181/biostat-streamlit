@@ -100,11 +100,13 @@ if menu == "Modélisation":
         log_model = LogisticRegression()
         log_model.fit(X_train, y_train)
         y_pred_log = log_model.predict(X_test)
+        st.session_state['log_model'] = log_model  # Stocker le modèle
 
         # Forêt aléatoire
         rf_model = RandomForestClassifier(n_estimators=100, random_state=42)
         rf_model.fit(X_train, y_train)
         y_pred_rf = rf_model.predict(X_test)
+        st.session_state['rf_model'] = rf_model  # Stocker le modèle
 
         # Afficher les résultats
         st.subheader("Régression Logistique")
@@ -119,28 +121,33 @@ if menu == "Modélisation":
 if menu == "Courbes ROC":
     st.header("Courbes ROC")
     if 'X_test' in st.session_state and 'y_test' in st.session_state:
-        X_test = st.session_state['X_test']
-        y_test = st.session_state['y_test']
-        
-        # Régression Logistique ROC
-        y_prob_log = log_model.predict_proba(X_test)[:, 1]
-        fpr_log, tpr_log, _ = roc_curve(y_test, y_prob_log)
-        roc_auc_log = auc(fpr_log, tpr_log)
+        if 'log_model' in st.session_state and 'rf_model' in st.session_state:
+            X_test = st.session_state['X_test']
+            y_test = st.session_state['y_test']
+            log_model = st.session_state['log_model']
+            rf_model = st.session_state['rf_model']
+            
+            # Régression Logistique ROC
+            y_prob_log = log_model.predict_proba(X_test)[:, 1]
+            fpr_log, tpr_log, _ = roc_curve(y_test, y_prob_log)
+            roc_auc_log = auc(fpr_log, tpr_log)
 
-        # Forêt Aléatoire ROC
-        y_prob_rf = rf_model.predict_proba(X_test)[:, 1]
-        fpr_rf, tpr_rf, _ = roc_curve(y_test, y_prob_rf)
-        roc_auc_rf = auc(fpr_rf, tpr_rf)
+            # Forêt Aléatoire ROC
+            y_prob_rf = rf_model.predict_proba(X_test)[:, 1]
+            fpr_rf, tpr_rf, _ = roc_curve(y_test, y_prob_rf)
+            roc_auc_rf = auc(fpr_rf, tpr_rf)
 
-        # Affichage des courbes ROC
-        fig, ax = plt.subplots()
-        ax.plot(fpr_log, tpr_log, label=f"Régression Logistique (AUC = {roc_auc_log:.2f})", color='blue')
-        ax.plot(fpr_rf, tpr_rf, label=f"Forêt Aléatoire (AUC = {roc_auc_rf:.2f})", color='green')
-        ax.plot([0, 1], [0, 1], 'k--', label="Modèle aléatoire (AUC = 0.50)", color='red')
-        ax.set_xlabel("Taux de faux positifs (FPR)")
-        ax.set_ylabel("Taux de vrais positifs (TPR)")
-        ax.set_title("Courbes ROC")
-        ax.legend()
-        st.pyplot(fig)
+            # Affichage des courbes ROC
+            fig, ax = plt.subplots()
+            ax.plot(fpr_log, tpr_log, label=f"Régression Logistique (AUC = {roc_auc_log:.2f})", color='blue')
+            ax.plot(fpr_rf, tpr_rf, label=f"Forêt Aléatoire (AUC = {roc_auc_rf:.2f})", color='green')
+            ax.plot([0, 1], [0, 1], 'k--', label="Modèle aléatoire (AUC = 0.50)", color='red')
+            ax.set_xlabel("Taux de faux positifs (FPR)")
+            ax.set_ylabel("Taux de vrais positifs (TPR)")
+            ax.set_title("Courbes ROC")
+            ax.legend()
+            st.pyplot(fig)
+        else:
+            st.warning("Veuillez entraîner les modèles dans la section 'Modélisation'.")
     else:
-        st.warning("Veuillez entraîner les modèles pour afficher les courbes ROC.")
+        st.warning("Veuillez préparer les données dans la section 'Préparation pour la modélisation'.")
