@@ -76,7 +76,28 @@ if menu == "Préparation pour la modélisation":
         if target and features:
             X = data[features]
             y = data[target]
+
+            # Convertir les colonnes catégoriques en numériques
+            X = pd.get_dummies(X, drop_first=True)
+            if y.dtype == 'object':
+                y = y.map({'OUI': 1, 'NON': 0})  # Adapter selon vos données
+
+            # Remplacer les valeurs manquantes par 0
+            X = X.fillna(0)
+            y = y.fillna(0)
+
+            # Diviser les données en ensembles d'entraînement et de test
             X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+            # Vérification des types et affichage des données
+            st.write("Types des colonnes dans X_train :")
+            st.write(X_train.dtypes)
+            st.write("Aperçu des premières lignes de X_train :")
+            st.write(X_train.head())
+            st.write("Aperçu des premières valeurs de y_train :")
+            st.write(y_train.head())
+
+            # Stocker les données pour la modélisation
             st.session_state['X_train'] = X_train
             st.session_state['X_test'] = X_test
             st.session_state['y_train'] = y_train
@@ -95,25 +116,28 @@ if menu == "Modélisation":
         X_test = st.session_state['X_test']
         y_train = st.session_state['y_train']
         y_test = st.session_state['y_test']
-        
-        # Régression logistique
-        log_model = LogisticRegression()
-        log_model.fit(X_train, y_train)
-        y_pred_log = log_model.predict(X_test)
-        st.session_state['log_model'] = log_model  # Stocker le modèle
 
-        # Forêt aléatoire
-        rf_model = RandomForestClassifier(n_estimators=100, random_state=42)
-        rf_model.fit(X_train, y_train)
-        y_pred_rf = rf_model.predict(X_test)
-        st.session_state['rf_model'] = rf_model  # Stocker le modèle
+        try:
+            # Régression logistique
+            log_model = LogisticRegression()
+            log_model.fit(X_train, y_train)
+            y_pred_log = log_model.predict(X_test)
+            st.session_state['log_model'] = log_model  # Stocker le modèle
 
-        # Afficher les résultats
-        st.subheader("Régression Logistique")
-        st.write(classification_report(y_test, y_pred_log))
+            # Forêt aléatoire
+            rf_model = RandomForestClassifier(n_estimators=100, random_state=42)
+            rf_model.fit(X_train, y_train)
+            y_pred_rf = rf_model.predict(X_test)
+            st.session_state['rf_model'] = rf_model  # Stocker le modèle
 
-        st.subheader("Forêt Aléatoire")
-        st.write(classification_report(y_test, y_pred_rf))
+            # Afficher les résultats
+            st.subheader("Régression Logistique")
+            st.write(classification_report(y_test, y_pred_log))
+
+            st.subheader("Forêt Aléatoire")
+            st.write(classification_report(y_test, y_pred_rf))
+        except ValueError as e:
+            st.error(f"Erreur lors de la modélisation : {e}")
     else:
         st.warning("Veuillez préparer les données dans la section 'Préparation pour la modélisation'.")
 
