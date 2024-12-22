@@ -28,7 +28,7 @@ if menu == "Chargement des données":
     if uploaded_file:
         try:
             # Lire les données Excel
-            data = pd.read_excel(uploaded_file, header=1)
+            data = pd.read_excel(uploaded_file)
             st.session_state['data'] = data
             st.success("Données chargées avec succès !")
             st.write("Dimensions des données :", data.shape)
