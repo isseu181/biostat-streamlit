@@ -12,8 +12,6 @@ import streamlit as st
 """
 **Configuration et importation des bibliothèques**"""
 
-pip install lifelines
-
 # Importation des bibliothèques nécessaires
 import pandas as pd
 import numpy as np
