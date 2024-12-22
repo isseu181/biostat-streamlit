@@ -13,24 +13,27 @@ def preparer_donnees(data):
     st.write("Colonnes disponibles dans les données :", data.columns)
 
     # Vérifier si les colonnes nécessaires sont présentes
-    required_columns = ['Age', 'Pression_artérielle', 'Deces']  # Exemple de colonnes
+    required_columns = ['AGE', 'Hypertension Arterielle', 'Evolution']  # Colonnes correctes
     missing_columns = [col for col in required_columns if col not in data.columns]
     
     if missing_columns:
         st.error(f"Les colonnes suivantes sont manquantes dans les données : {', '.join(missing_columns)}")
-        return None  # Retourner None si les colonnes sont manquantes
+        return None, None  # Retourner None si les colonnes sont manquantes
     
     # Traitement des valeurs manquantes pour les autres colonnes (si nécessaire)
     data = data.fillna({
-        'Deces': data['Deces'].mode()[0]  # Remplacer les valeurs manquantes dans 'Deces' par la modalité la plus fréquente
+        'Evolution': data['Evolution'].mode()[0]  # Remplacer les valeurs manquantes dans 'Evolution' par la modalité la plus fréquente
     })
+    
+    # Encodage de la colonne 'Evolution' (Décès -> 1, Vivant -> 0)
+    data['Evolution'] = data['Evolution'].apply(lambda x: 1 if x == 'Décès' else 0)
     
     # Encodage des variables catégorielles (si elles existent)
     data = pd.get_dummies(data, drop_first=True)
     
     # Mise à l'échelle des variables numériques
     scaler = StandardScaler()
-    data[['Age', 'Pression_artérielle']] = scaler.fit_transform(data[['Age', 'Pression_artérielle']])
+    data[['AGE', 'Hypertension Arterielle']] = scaler.fit_transform(data[['AGE', 'Hypertension Arterielle']])
     
     return data, scaler
 
@@ -53,6 +56,9 @@ def app():
             
             # Afficher un aperçu des données brutes
             st.write("Aperçu des données brutes :", data.head())
+            
+            # Afficher les noms de colonnes
+            st.write("Noms des colonnes dans les données :", data.columns)
             
             # Afficher la dimension des données
             st.write("Dimension des données : ", data.shape)
@@ -77,12 +83,12 @@ def app():
             
             # Exemple de visualisation de distribution
             st.write("Distribution de l'âge des patients")
-            plt.hist(data['Age'], bins=10)
+            plt.hist(data['AGE'], bins=10)
             st.pyplot()
             
             # Exemple de visualisation de la pression artérielle
-            st.write("Distribution de la pression artérielle")
-            plt.hist(data['Pression_artérielle'], bins=10, color='orange')
+            st.write("Distribution de l'hypertension artérielle")
+            plt.hist(data['Hypertension Arterielle'], bins=10, color='orange')
             st.pyplot()
             
             # Calcul de corrélation entre les variables
@@ -98,8 +104,8 @@ def app():
             st.write("Modélisation :")
             
             # Séparer les caractéristiques (X) et la variable cible (y)
-            X = data[['Age', 'Pression_artérielle']]
-            y = data['Deces']
+            X = data[['AGE', 'Hypertension Arterielle']]
+            y = data['Evolution']
             
             # Séparer les données en ensembles d'entraînement et de test
             X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
