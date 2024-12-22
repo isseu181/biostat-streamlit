@@ -1,187 +1,152 @@
-# Configuration et importation des bibliothèques
+import streamlit as st
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
 import seaborn as sns
-import streamlit as st
+import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LogisticRegression
-from sklearn.ensemble import RandomForestClassifier
+from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import classification_report, roc_curve, auc
 
-# Titre de l'application
-st.title("Analyse Biostatistique avec Streamlit")
-st.sidebar.header("Navigation")
-menu = st.sidebar.radio("Étapes", [
-    "Chargement des données",
-    "Exploration et prétraitement",
-    "Visualisations",
-    "Préparation pour la modélisation",
-    "Modélisation",
-    "Courbes ROC"
-])
-
-# Section : Chargement des données
-if menu == "Chargement des données":
-    st.header("Chargement des données")
-    uploaded_file = st.file_uploader("Téléversez un fichier Excel", type=["xlsx"])
-    if uploaded_file:
-        try:
-            # Lire les données Excel
-            data = pd.read_excel(uploaded_file)
-            st.session_state['data'] = data
-            st.success("Données chargées avec succès !")
-            st.write("Dimensions des données :", data.shape)
-            st.write("Aperçu des données :")
-            st.write(data.head())
-        except Exception as e:
-            st.error(f"Erreur lors du chargement des données : {e}")
+# Fonction pour charger les données
+def charger_donnees():
+    uploaded_file = st.file_uploader("Choisir un fichier Excel", type="xlsx")
+    if uploaded_file is not None:
+        data = pd.read_excel(uploaded_file)
+        st.write("Données chargées avec succès!")
+        return data
     else:
-        st.warning("Veuillez téléverser un fichier Excel pour continuer.")
+        return None
 
-# Section : Exploration et prétraitement des données
-if menu == "Exploration et prétraitement":
-    st.header("Exploration et prétraitement")
-    if 'data' in st.session_state:
-        data = st.session_state['data']
-        st.write("Résumé statistique :")
-        st.write(data.describe())
-        st.write("Valeurs manquantes :")
-        st.write(data.isnull().sum())
-    else:
-        st.warning("Veuillez d'abord charger les données dans la section 'Chargement des données'.")
+# Fonction pour explorer les données
+def explorer_donnees(data):
+    st.write("### Aperçu des données")
+    st.write(data.head())
+    
+    st.write("### Statistiques descriptives")
+    st.write(data.describe())
+    
+    st.write("### Vérification des valeurs manquantes")
+    st.write(data.isnull().sum())
 
-# Section : Visualisations
-if menu == "Visualisations":
-    st.header("Visualisations")
-    if 'data' in st.session_state:
-        data = st.session_state['data']
+# Fonction pour visualiser les données
+def visualiser_donnees(data):
+    st.write("### Visualisation des données")
+    
+    fig, ax = plt.subplots()
+    sns.countplot(x='Evolution', data=data, ax=ax)
+    ax.set_title('Distribution de la survenue de décès')
+    st.pyplot(fig)
+
+    fig, ax = plt.subplots()
+    sns.boxplot(x='Evolution', y='Age', data=data, ax=ax)
+    ax.set_title('Impact de l\'âge sur la survenue de décès')
+    st.pyplot(fig)
+
+# Fonction pour préparer les données
+def preparer_donnees(data):
+    # Conversion des variables catégoriques en numériques
+    data = pd.get_dummies(data, drop_first=True)
+    
+    # Mise à l'échelle des variables numériques
+    scaler = StandardScaler()
+    data[['Age', 'Pression_artérielle']] = scaler.fit_transform(data[['Age', 'Pression_artérielle']])
+    
+    return data, scaler
+
+# Fonction pour séparer les données en ensembles d'entraînement et de test
+def separer_donnees(data):
+    X = data.drop('Evolution', axis=1)  # Variables explicatives
+    y = data['Evolution']  # Variable cible
+    
+    # Séparation des données (80% train, 20% test)
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+    
+    return X_train, X_test, y_train, y_test
+
+# Fonction pour entraîner et évaluer le modèle
+def entrainer_et_evaluer_modele(X_train, X_test, y_train, y_test):
+    # Modélisation : Régression logistique
+    log_model = LogisticRegression()
+    log_model.fit(X_train, y_train)
+
+    # Prédictions sur l'ensemble de test
+    y_pred = log_model.predict(X_test)
+
+    # Rapport de classification
+    st.write("### Rapport de classification")
+    st.text(classification_report(y_test, y_pred))
+
+    # Courbe ROC pour évaluer la performance du modèle
+    y_prob = log_model.predict_proba(X_test)[:, 1]  # Probabilités de prédiction pour la classe 1 (décès)
+
+    fpr, tpr, _ = roc_curve(y_test, y_prob)
+    roc_auc = auc(fpr, tpr)
+
+    fig, ax = plt.subplots()
+    ax.plot(fpr, tpr, color='blue', label=f'Régression Logistique (AUC = {roc_auc:.2f})')
+    ax.plot([0, 1], [0, 1], 'k--', label="Modèle aléatoire (AUC = 0.50)")
+    ax.set_xlabel('Taux de faux positifs (FPR)')
+    ax.set_ylabel('Taux de vrais positifs (TPR)')
+    ax.set_title('Courbe ROC')
+    ax.legend(loc='lower right')
+    st.pyplot(fig)
+
+    return log_model
+
+# Fonction pour effectuer une prédiction pour un nouveau patient
+def predire_pour_nouveau_patient(log_model, scaler):
+    st.write("### Entrez les données pour un nouveau patient")
+    age = st.number_input("Âge", min_value=0, max_value=100, value=50)
+    pression_art = st.number_input("Pression artérielle", min_value=0, max_value=200, value=120)
+    traitement = st.radio("Traitement", [0, 1], index=1)
+    
+    # Préparation des données du patient
+    new_patient = pd.DataFrame({
+        'Age': [age],
+        'Pression_artérielle': [pression_art],
+        'Traitement': [traitement]
+    })
+    
+    # Mise à l'échelle des données
+    new_patient = pd.get_dummies(new_patient, drop_first=True)
+    new_patient = scaler.transform(new_patient)
+    
+    # Prédiction de la probabilité de décès
+    prob_deces = log_model.predict_proba(new_patient)[:, 1]
+    st.write(f"Probabilité de décès pour ce patient : {prob_deces[0]:.2f}")
+
+# Création de l'interface Streamlit
+def app():
+    st.title("Étude pronostique de la survenue de décès après traitement")
+
+    data = charger_donnees()
+
+    if data is not None:
+        # Explorations des données
+        st.sidebar.header("Exploration des données")
+        if st.sidebar.button("Explorer les données"):
+            explorer_donnees(data)
         
-        # Graphique countplot pour analyser la relation entre traitement et évolution
-        if 'Traitement' in data.columns and 'Evolution' in data.columns:
-            st.subheader("Analyse de la relation entre traitement et évolution")
-            fig, ax = plt.subplots()
-            sns.countplot(x='Traitement', hue='Evolution', data=data, ax=ax)
-            ax.set_title("Évolution par type de traitement")
-            ax.legend(title='Évolution', labels=['Vivant (0)', 'Décès (1)'])
-            st.pyplot(fig)
-        
-        numeric_columns = data.select_dtypes(include=np.number).columns.tolist()
-        col = st.selectbox("Sélectionnez une colonne numérique pour l'histogramme", numeric_columns)
-        if col:
-            st.write(f"Distribution de {col} :")
-            fig, ax = plt.subplots()
-            sns.histplot(data[col], kde=True, ax=ax)
-            st.pyplot(fig)
-    else:
-        st.warning("Veuillez d'abord charger les données dans la section 'Chargement des données'.")
+        # Visualisation des données
+        st.sidebar.header("Visualisation des données")
+        if st.sidebar.button("Visualiser les données"):
+            visualiser_donnees(data)
 
-# Section : Préparation des données pour la modélisation
-if menu == "Préparation pour la modélisation":
-    st.header("Préparation des données pour la modélisation")
-    if 'data' in st.session_state:
-        data = st.session_state['data']
-        target = st.selectbox("Sélectionnez la variable cible (y)", data.columns)
-        features = st.multiselect("Sélectionnez les variables explicatives (X)", data.columns)
-        if target and features:
-            X = data[features]
-            y = data[target]
+        # Préparation et entraînement du modèle
+        st.sidebar.header("Modélisation")
+        if st.sidebar.button("Entraîner le modèle"):
+            data, scaler = preparer_donnees(data)
+            X_train, X_test, y_train, y_test = separer_donnees(data)
+            log_model = entrainer_et_evaluer_modele(X_train, X_test, y_train, y_test)
 
-            # Convertir les colonnes catégoriques en numériques
-            X = pd.get_dummies(X, drop_first=True)
-            if y.dtype == 'object':
-                y = y.map({'OUI': 1, 'NON': 0})  # Adapter selon vos données
+        # Prédiction pour un nouveau patient
+        st.sidebar.header("Prédiction pour un nouveau patient")
+        if st.sidebar.button("Faire une prédiction"):
+            if 'log_model' in locals() and 'scaler' in locals():
+                predire_pour_nouveau_patient(log_model, scaler)
+            else:
+                st.write("Entraînez d'abord le modèle avant de faire une prédiction.")
 
-            # Remplacer les valeurs manquantes par 0
-            X = X.fillna(0)
-            y = y.fillna(0)
-
-            # Diviser les données en ensembles d'entraînement et de test
-            X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-
-            # Vérification des types et affichage des données
-            st.write("Types des colonnes dans X_train :")
-            st.write(X_train.dtypes)
-            st.write("Aperçu des premières lignes de X_train :")
-            st.write(X_train.head())
-            st.write("Aperçu des premières valeurs de y_train :")
-            st.write(y_train.head())
-
-            # Stocker les données pour la modélisation
-            st.session_state['X_train'] = X_train
-            st.session_state['X_test'] = X_test
-            st.session_state['y_train'] = y_train
-            st.session_state['y_test'] = y_test
-            st.success("Données préparées pour la modélisation.")
-        else:
-            st.warning("Veuillez sélectionner la cible et les variables explicatives.")
-    else:
-        st.warning("Veuillez d'abord charger les données dans la section 'Chargement des données'.")
-
-# Section : Modélisation
-if menu == "Modélisation":
-    st.header("Modélisation")
-    if 'X_train' in st.session_state and 'y_train' in st.session_state:
-        X_train = st.session_state['X_train']
-        X_test = st.session_state['X_test']
-        y_train = st.session_state['y_train']
-        y_test = st.session_state['y_test']
-
-        try:
-            # Régression logistique
-            log_model = LogisticRegression()
-            log_model.fit(X_train, y_train)
-            y_pred_log = log_model.predict(X_test)
-            st.session_state['log_model'] = log_model  # Stocker le modèle
-
-            # Forêt aléatoire
-            rf_model = RandomForestClassifier(n_estimators=100, random_state=42)
-            rf_model.fit(X_train, y_train)
-            y_pred_rf = rf_model.predict(X_test)
-            st.session_state['rf_model'] = rf_model  # Stocker le modèle
-
-            # Afficher les résultats
-            st.subheader("Régression Logistique")
-            st.write(classification_report(y_test, y_pred_log))
-
-            st.subheader("Forêt Aléatoire")
-            st.write(classification_report(y_test, y_pred_rf))
-        except ValueError as e:
-            st.error(f"Erreur lors de la modélisation : {e}")
-    else:
-        st.warning("Veuillez préparer les données dans la section 'Préparation pour la modélisation'.")
-
-# Section : Courbes ROC
-if menu == "Courbes ROC":
-    st.header("Courbes ROC")
-    if 'X_test' in st.session_state and 'y_test' in st.session_state:
-        if 'log_model' in st.session_state and 'rf_model' in st.session_state:
-            X_test = st.session_state['X_test']
-            y_test = st.session_state['y_test']
-            log_model = st.session_state['log_model']
-            rf_model = st.session_state['rf_model']
-            
-            # Régression Logistique ROC
-            y_prob_log = log_model.predict_proba(X_test)[:, 1]
-            fpr_log, tpr_log, _ = roc_curve(y_test, y_prob_log)
-            roc_auc_log = auc(fpr_log, tpr_log)
-
-            # Forêt Aléatoire ROC
-            y_prob_rf = rf_model.predict_proba(X_test)[:, 1]
-            fpr_rf, tpr_rf, _ = roc_curve(y_test, y_prob_rf)
-            roc_auc_rf = auc(fpr_rf, tpr_rf)
-
-            # Affichage des courbes ROC
-            fig, ax = plt.subplots()
-            ax.plot(fpr_log, tpr_log, label=f"Régression Logistique (AUC = {roc_auc_log:.2f})", color='blue')
-            ax.plot(fpr_rf, tpr_rf, label=f"Forêt Aléatoire (AUC = {roc_auc_rf:.2f})", color='green')
-            ax.plot([0, 1], [0, 1], 'k--', label="Modèle aléatoire (AUC = 0.50)", color='red')
-            ax.set_xlabel("Taux de faux positifs (FPR)")
-            ax.set_ylabel("Taux de vrais positifs (TPR)")
-            ax.set_title("Courbes ROC")
-            ax.legend()
-            st.pyplot(fig)
-        else:
-            st.warning("Veuillez entraîner les modèles dans la section 'Modélisation'.")
-    else:
-        st.warning("Veuillez préparer les données dans la section 'Préparation pour la modélisation'.")
+if __name__ == '__main__':
+    app()
