@@ -62,6 +62,8 @@ st.write(data.dtypes)
 """**Visualisations**"""
 
 # Distribution des âges
+import matplotlib.pyplot as plt
+import seaborn as sns
 sns.histplot(data['AGE'], kde=True)
 plt.title("Distribution des âges")
 st.pyplot(plt)
