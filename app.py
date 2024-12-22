@@ -26,9 +26,6 @@ from lifelines.plotting import plot_lifetimes
 """ **Chargement des données**"""
 
 # Charger les données
-from google.colab import files
-uploaded = files.upload()
-# Charger le fichier Excel dans un DataFrame
 data = pd.read_excel("Donnnées_Projet_M2SID2023_2024.xlsx", header=1)
 # Afficher les premières lignes des données
 data.head(10)
