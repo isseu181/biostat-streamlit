@@ -26,7 +26,7 @@ menu = st.sidebar.radio("Étapes", [
 st.header("Chargement de la base de données")
 try:
     # Charger directement la base intégrée
-    data = pd.read_excel("base_projet.xlsx", header=0)
+    data = pd.read_excel("Donnnées_Projet_M2SID2023_2024.xlsx", header=0)
     st.success("Base de données chargée avec succès !")
     st.write("Aperçu des données :", data.head())
     st.write(f"Dimensions des données : {data.shape}")
