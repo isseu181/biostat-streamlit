@@ -56,13 +56,29 @@ if menu == "Analyse descriptive":
         st.write("Résumé statistique des données :")
         st.write(data.describe(include='all'))
 
+        # Visualisation : Relation entre Traitement et Décès
+        st.subheader("Analyse de la relation entre Traitement et Décès")
+        fig1, ax1 = plt.subplots()
+        sns.countplot(x='Traitement', hue='Evolution', data=data, ax=ax1)
+        ax1.set_title("Évolution par type de traitement")
+        ax1.legend(title='Évolution', labels=['Vivant (0)', 'Décès (1)'])
+        st.pyplot(fig1)
+
+        # Visualisation : Distribution des âges
+        st.subheader("Distribution des âges")
+        fig2, ax2 = plt.subplots()
+        sns.histplot(data['AGE'], kde=True, ax=ax2)
+        ax2.set_title("Distribution des âges")
+        ax2.set_xlabel("Âge")
+        st.pyplot(fig2)
+
         # Corrélations
         numeric_data = data.select_dtypes(include=[np.number])
         if not numeric_data.empty:
             st.write("Matrice de corrélation :")
-            fig, ax = plt.subplots(figsize=(10, 6))
-            sns.heatmap(numeric_data.corr(), annot=True, cmap="coolwarm", ax=ax)
-            st.pyplot(fig)
+            fig3, ax3 = plt.subplots(figsize=(10, 6))
+            sns.heatmap(numeric_data.corr(), annot=True, cmap="coolwarm", ax=ax3)
+            st.pyplot(fig3)
         else:
             st.warning("Aucune colonne numérique disponible pour calculer la corrélation.")
     else:
@@ -87,6 +103,10 @@ if menu == "Préparation des données":
 
             # Diviser les données en ensembles d'entraînement et de test
             X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+            # Afficher les tailles des ensembles
+            st.write(f"Taille de l'ensemble d'entraînement : {X_train.shape}")
+            st.write(f"Taille de l'ensemble de test : {X_test.shape}")
 
             # Stocker les données
             st.session_state['X_train'] = X_train
