@@ -27,7 +27,7 @@ if menu == "Chargement des données":
     st.header("Chargement de la base de données")
     try:
         # Charger directement la base intégrée
-        data = pd.read_excel("Donnnées_Projet_M2SID2023_2024.xlsx", header=1)
+        data = pd.read_excel("Donnnées_Projet_M2SID2023_2024.xlsx", header=0)
         st.success("Base de données chargée avec succès !")
         st.write("Aperçu des données :", data.head(10))
         st.write(f"Dimensions des données : {data.shape}")
