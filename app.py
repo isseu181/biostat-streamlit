@@ -28,7 +28,7 @@ try:
     # Charger directement la base intégrée
     data = pd.read_excel("Donnnées_Projet_M2SID2023_2024.xlsx", header=1)
     st.success("Base de données chargée avec succès !")
-    st.write("Aperçu des données :", data.head())
+    st.write("Aperçu des données :", data.head(10))
     st.write(f"Dimensions des données : {data.shape}")
 
     # Stocker les données dans la session
