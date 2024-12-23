@@ -76,21 +76,17 @@ if menu == "Analyse descriptive":
         st.write("Résumé statistique des données :")
         st.write(data.describe(include='all'))
 
-        # Visualisation : Relation entre Traitement et Décès
-        st.subheader("Analyse de la relation entre Traitement et Décès")
-        fig1, ax1 = plt.subplots()
-        sns.countplot(x='Traitement', hue='Evolution', data=data, ax=ax1)
-        ax1.set_title("Évolution par type de traitement")
-        ax1.legend(title='Évolution', labels=['Vivant (0)', 'Décès (1)'])
-        st.pyplot(fig1)
-
-        # Visualisation : Distribution des âges
-        st.subheader("Distribution des âges")
+        # Visualisation : Répartition des traitements par évolution (décès ou vivant)
+        st.subheader("Répartition des traitements par évolution")
         fig2, ax2 = plt.subplots()
-        sns.histplot(data['AGE'], kde=True, ax=ax2)
-        ax2.set_title("Distribution des âges")
-        ax2.set_xlabel("Âge")
+        sns.countplot(x='Traitement', hue='Evolution', data=data, ax=ax2)
+        ax2.set_title("Répartition des traitements par évolution")
+        ax2.set_xlabel("Type de traitement (1 = Thrombolyse, 2 = Chirurgie)")
+        ax2.set_ylabel("Nombre de patients")
+        ax2.legend(title="Évolution", labels=["Vivant (0)", "Décès (1)"])
         st.pyplot(fig2)
+
+       
     else:
         st.warning("Veuillez charger les données dans la section précédente.")
 
