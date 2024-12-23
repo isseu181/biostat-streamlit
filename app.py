@@ -78,13 +78,25 @@ if menu == "Analyse descriptive":
 
         # Visualisation : Répartition des traitements par évolution (décès ou vivant)
         st.subheader("Répartition des traitements par évolution")
-        fig2, ax2 = plt.subplots()
+        fig1, ax2 = plt.subplots()
         sns.countplot(x='Traitement', hue='Evolution', data=data, ax=ax2)
         ax2.set_title("Répartition des traitements par évolution")
         ax2.set_xlabel("Type de traitement (1 = Thrombolyse, 2 = Chirurgie)")
         ax2.set_ylabel("Nombre de patients")
         ax2.legend(title="Évolution", labels=["Vivant (0)", "Décès (1)"])
+        st.pyplot(fig1)
+       # Visualisation : Répartition des sexes par évolution (Vivant ou Décès)
+        st.subheader("Répartition des sexes par évolution")
+        fig2, ax = plt.subplots()
+        sns.countplot(x='SEXE', hue='Evolution', data=data, ax=ax)
+        ax.set_title("Répartition des sexes par évolution")
+        ax.set_xlabel("Sexe (0 = Femme, 1 = Homme)")
+        ax.set_ylabel("Nombre de patients")
+        ax.legend(title="Évolution", labels=["Vivant (0)", "Décès (1)"])
         st.pyplot(fig2)
+
+
+       
 
        
     else:
