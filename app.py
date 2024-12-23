@@ -22,20 +22,20 @@ menu = st.sidebar.radio("Étapes", [
     "Courbes ROC et recommandations"
 ])
 
- # Chargement de la base intégrée
-st.header("Chargement de la base de données")
-try:
-    # Charger directement la base intégrée
-    data = pd.read_excel("Donnnées_Projet_M2SID2023_2024.xlsx")
-    st.success("Base de données chargée avec succès !")
-    st.write("Aperçu des données :", data.head(10))
-    st.write(f"Dimensions des données : {data.shape}")
+# Section : Chargement de la base de données
+if menu == "Chargement des données":
+    st.header("Chargement de la base de données")
+    try:
+        # Charger directement la base intégrée
+        data = pd.read_excel("Donnnées_Projet_M2SID2023_2024.xlsx", header=1)
+        st.success("Base de données chargée avec succès !")
+        st.write("Aperçu des données :", data.head(10))
+        st.write(f"Dimensions des données : {data.shape}")
 
-    # Stocker les données dans la session
-    st.session_state['data'] = data
-except Exception as e:
-    st.error(f"Erreur lors du chargement de la base de données : {e}")
-
+        # Stocker les données dans la session
+        st.session_state['data'] = data
+    except Exception as e:
+        st.error(f"Erreur lors du chargement de la base de données : {e}")
 
 # Section : Analyse descriptive
 if menu == "Analyse descriptive":
@@ -83,7 +83,8 @@ if menu == "Analyse descriptive":
         ax2.set_ylabel("Nombre de patients")
         ax2.legend(title="Évolution", labels=["Vivant (0)", "Décès (1)"])
         st.pyplot(fig1)
-       # Visualisation : Répartition des sexes par évolution (Vivant ou Décès)
+
+        # Visualisation : Répartition des sexes par évolution (Vivant ou Décès)
         st.subheader("Répartition des sexes par évolution")
         fig2, ax = plt.subplots()
         sns.countplot(x='SEXE', hue='Evolution', data=data, ax=ax)
@@ -94,19 +95,7 @@ if menu == "Analyse descriptive":
         st.pyplot(fig2)
     else:
         st.warning("Veuillez charger les données dans la section précédente.")
-# Visualisations
-if menu == "Visualisations":
-    st.header("Visualisations")
-    if 'data' in locals():
-        numeric_columns = data.select_dtypes(include=np.number).columns.tolist()
-        col = st.selectbox("Sélectionnez une colonne numérique pour l'histogramme", numeric_columns)
-        if col:
-            st.write(f"Distribution de {col} :")
-            fig, ax = plt.subplots()
-            sns.histplot(data[col], kde=True, ax=ax)
-            st.pyplot(fig)
-    else:
-        st.warning("Veuillez d'abord charger les données.")
+
 # Section : Préparation des données
 if menu == "Préparation des données":
     st.header("Préparation des données pour la modélisation")
@@ -153,7 +142,7 @@ if menu == "Modélisation et comparaison":
         y_test = st.session_state['y_test']
 
         # Modèle de régression logistique
-        log_model = LogisticRegression()
+        log_model = LogisticRegression(max_iter=1000)
         log_model.fit(X_train, y_train)
         y_pred_log = log_model.predict(X_test)
         st.session_state['log_model'] = log_model
