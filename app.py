@@ -92,14 +92,21 @@ if menu == "Analyse descriptive":
         ax.set_ylabel("Nombre de patients")
         ax.legend(title="Évolution", labels=["Vivant (0)", "Décès (1)"])
         st.pyplot(fig2)
-
-
-       
-
-       
     else:
         st.warning("Veuillez charger les données dans la section précédente.")
-
+# Visualisations
+if menu == "Visualisations":
+    st.header("Visualisations")
+    if 'data' in locals():
+        numeric_columns = data.select_dtypes(include=np.number).columns.tolist()
+        col = st.selectbox("Sélectionnez une colonne numérique pour l'histogramme", numeric_columns)
+        if col:
+            st.write(f"Distribution de {col} :")
+            fig, ax = plt.subplots()
+            sns.histplot(data[col], kde=True, ax=ax)
+            st.pyplot(fig)
+    else:
+        st.warning("Veuillez d'abord charger les données.")
 # Section : Préparation des données
 if menu == "Préparation des données":
     st.header("Préparation des données pour la modélisation")
