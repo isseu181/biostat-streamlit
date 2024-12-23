@@ -31,14 +31,14 @@ if menu == "Chargement des données":
             # Charger les données
             
             data = pd.read_excel("Donnnées_Projet_M2SID2023_2024.xlsx", header=0)
-            st.session_state['data'] = data
-            st.success("Données chargées avec succès !")
+            st.success("Base de données chargée avec succès !")
             st.write("Aperçu des données :", data.head())
             st.write(f"Dimensions des données : {data.shape}")
-        except Exception as e:
-            st.error(f"Erreur lors du chargement des données : {e}")
-    else:
-        st.warning("Veuillez téléverser un fichier Excel pour continuer.")
+
+            # Stocker les données dans la session
+            st.session_state['data'] = data
+            except Exception as e:
+            st.error(f"Erreur lors du chargement de la base de données : {e}")
 
 # Section : Analyse descriptive
 if menu == "Analyse descriptive":
