@@ -4,7 +4,7 @@ import numpy as np
 import streamlit as st
 import matplotlib.pyplot as plt
 import seaborn as sns
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, cross_val_score
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import classification_report, roc_curve, auc, confusion_matrix
@@ -17,8 +17,9 @@ menu = st.sidebar.radio("Étapes", [
     "Chargement des données",
     "Analyse descriptive",
     "Préparation des données",
-    "Modélisation et comparaison",
-    "Courbes ROC et déploiement"
+    "Modélisation et validation croisée",
+    "Prédictions finales",
+    "Recommandations pratiques"
 ])
 
 # Section : Chargement des données
@@ -121,66 +122,57 @@ if menu == "Préparation des données":
     else:
         st.warning("Veuillez charger les données dans la section précédente.")
 
-# Section : Modélisation et comparaison
-if menu == "Modélisation et comparaison":
-    st.header("Modélisation et comparaison des modèles")
+# Section : Modélisation et validation croisée
+if menu == "Modélisation et validation croisée":
+    st.header("Modélisation et validation croisée")
     if 'X_train' in st.session_state and 'y_train' in st.session_state:
         X_train = st.session_state['X_train']
-        X_test = st.session_state['X_test']
         y_train = st.session_state['y_train']
-        y_test = st.session_state['y_test']
 
         # Modèle de régression logistique
         log_model = LogisticRegression()
+        scores_log = cross_val_score(log_model, X_train, y_train, cv=5, scoring='accuracy')
+        st.write(f"Validation croisée - Régression Logistique : {scores_log.mean():.2f} ± {scores_log.std():.2f}")
         log_model.fit(X_train, y_train)
-        y_pred_log = log_model.predict(X_test)
-        st.session_state['log_model'] = log_model
 
         # Modèle de forêt aléatoire
         rf_model = RandomForestClassifier(n_estimators=100, random_state=42)
+        scores_rf = cross_val_score(rf_model, X_train, y_train, cv=5, scoring='accuracy')
+        st.write(f"Validation croisée - Forêt Aléatoire : {scores_rf.mean():.2f} ± {scores_rf.std():.2f}")
         rf_model.fit(X_train, y_train)
-        y_pred_rf = rf_model.predict(X_test)
+
+        # Stocker les modèles
+        st.session_state['log_model'] = log_model
         st.session_state['rf_model'] = rf_model
-
-        # Afficher les résultats
-        st.subheader("Régression Logistique")
-        st.text(classification_report(y_test, y_pred_log))
-
-        st.subheader("Forêt Aléatoire")
-        st.text(classification_report(y_test, y_pred_rf))
     else:
         st.warning("Veuillez préparer les données avant de continuer.")
 
-# Section : Courbes ROC et déploiement
-if menu == "Courbes ROC et déploiement":
-    st.header("Courbes ROC et comparaison finale")
-    if 'X_test' in st.session_state and 'y_test' in st.session_state:
-        if 'log_model' in st.session_state and 'rf_model' in st.session_state:
-            X_test = st.session_state['X_test']
-            y_test = st.session_state['y_test']
-            log_model = st.session_state['log_model']
-            rf_model = st.session_state['rf_model']
+# Section : Prédictions finales
+if menu == "Prédictions finales":
+    st.header("Prédictions finales pour de nouveaux patients")
+    if 'rf_model' in st.session_state:
+        rf_model = st.session_state['rf_model']
+        X_test = st.session_state['X_test']
 
-            # Courbe ROC - Régression Logistique
-            y_prob_log = log_model.predict_proba(X_test)[:, 1]
-            fpr_log, tpr_log, _ = roc_curve(y_test, y_prob_log)
-            roc_auc_log = auc(fpr_log, tpr_log)
+        st.subheader("Entrez les caractéristiques du patient pour prédiction")
+        input_data = {col: st.number_input(f"{col}", value=float(X_test[col].mean())) for col in X_test.columns}
+        input_df = pd.DataFrame([input_data])
 
-            # Courbe ROC - Forêt Aléatoire
-            y_prob_rf = rf_model.predict_proba(X_test)[:, 1]
-            fpr_rf, tpr_rf, _ = roc_curve(y_test, y_prob_rf)
-            roc_auc_rf = auc(fpr_rf, tpr_rf)
-
-            # Tracer les courbes ROC
-            fig, ax = plt.subplots()
-            ax.plot(fpr_log, tpr_log, label=f"Régression Logistique (AUC = {roc_auc_log:.2f})", color="blue")
-            ax.plot(fpr_rf, tpr_rf, label=f"Forêt Aléatoire (AUC = {roc_auc_rf:.2f})", color="green")
-            ax.plot([0, 1], [0, 1], 'k--', label="Modèle aléatoire (AUC = 0.50)", color="red")
-            ax.set_xlabel("Taux de faux positifs (FPR)")
-            ax.set_ylabel("Taux de vrais positifs (TPR)")
-            ax.legend()
-            st.pyplot(fig)
-        else:
-            st.warning("Veuillez entraîner les modèles avant de continuer.")
+        # Prédiction
+        prediction = rf_model.predict(input_df)
+        probas = rf_model.predict_proba(input_df)[:, 1]
+        st.write(f"Prédiction : {'Décès (1)' if prediction[0] == 1 else 'Vivant (0)'}")
+        st.write(f"Probabilité de décès : {probas[0]:.2f}")
     else:
-        st.warning("Veuillez préparer les données avant de continuer.")
+        st.warning("Veuillez entraîner les modèles avant de continuer.")
+
+# Section : Recommandations pratiques
+if menu == "Recommandations pratiques":
+    st.header("Recommandations pratiques")
+    st.write("""
+    - Pour réduire le risque de décès, privilégiez les traitements ayant montré une efficacité élevée dans les modèles.
+    - Analysez les caractéristiques des patients pour ajuster les traitements, comme :
+        - Type de traitement (Thrombolyse ou Chirurgie).
+        - Surveillance étroite pour les patients présentant des signes de gravité.
+    - Intégrez les prédictions pour optimiser les décisions cliniques.
+    """)
