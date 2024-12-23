@@ -29,7 +29,8 @@ if menu == "Chargement des données":
     if uploaded_file:
         try:
             # Charger les données
-            data = pd.read_excel(uploaded_file, header=0)
+            
+            data = pd.read_excel("Donnnées_Projet_M2SID2023_2024.xlsx", header=0)
             st.session_state['data'] = data
             st.success("Données chargées avec succès !")
             st.write("Aperçu des données :", data.head())
