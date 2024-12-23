@@ -1,46 +1,143 @@
+# Configuration et importation des bibliothèques
 import pandas as pd
 import numpy as np
 import streamlit as st
+import matplotlib.pyplot as plt
+import seaborn as sns
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import classification_report, roc_curve, auc
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import classification_report, roc_curve, auc, confusion_matrix
 
 # Titre de l'application
 st.title("Étude pronostique des décès après traitement")
 
+# Navigation dans l'application
+menu = st.sidebar.radio("Étapes", [
+    "Chargement des données",
+    "Analyse descriptive",
+    "Préparation des données",
+    "Modélisation et comparaison",
+    "Courbes ROC et déploiement"
+])
+
 # Chargement des données
-uploaded_file = st.file_uploader("Téléversez un fichier Excel", type=["xlsx"])
-if uploaded_file:
-    data = pd.read_excel(uploaded_file)
-    st.write("Aperçu des données :", data.head())
+if menu == "Chargement des données":
+    st.header("Chargement des données")
+    uploaded_file = st.file_uploader("Téléversez un fichier Excel", type=["xlsx"])
+    if uploaded_file:
+        try:
+            data = pd.read_excel(uploaded_file, header=0)
+            st.session_state['data'] = data
+            st.success("Données chargées avec succès !")
+            st.write("Aperçu des données :")
+            st.write(data.head())
+            st.write(f"Dimensions des données : {data.shape}")
+        except Exception as e:
+            st.error(f"Erreur lors du chargement des données : {e}")
+    else:
+        st.warning("Veuillez téléverser un fichier Excel pour continuer.")
 
-    # Préparation des données
-    target = st.selectbox("Sélectionnez la variable cible", data.columns)
-    features = st.multiselect("Sélectionnez les variables explicatives", data.columns)
-
-    if target and features:
-        X = pd.get_dummies(data[features], drop_first=True)
-        y = data[target].map({'OUI': 1, 'NON': 0})  # Adapter selon vos données
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-
-        # Modélisation
-        model = LogisticRegression()
-        model.fit(X_train, y_train)
-        y_pred = model.predict(X_test)
-        st.write("Rapport de classification :", classification_report(y_test, y_pred))
-
-        # Courbe ROC
-        y_prob = model.predict_proba(X_test)[:, 1]
-        fpr, tpr, _ = roc_curve(y_test, y_prob)
-        roc_auc = auc(fpr, tpr)
-        st.write(f"AUC : {roc_auc:.2f}")
-
-        # Affichage de la courbe ROC
-        import matplotlib.pyplot as plt
-        fig, ax = plt.subplots()
-        ax.plot(fpr, tpr, label=f"ROC Curve (AUC = {roc_auc:.2f})")
-        ax.plot([0, 1], [0, 1], 'k--')
-        ax.set_xlabel("Taux de faux positifs")
-        ax.set_ylabel("Taux de vrais positifs")
-        ax.legend()
+# Analyse descriptive
+if menu == "Analyse descriptive":
+    st.header("Analyse descriptive")
+    if 'data' in st.session_state:
+        data = st.session_state['data']
+        st.write("Résumé statistique :")
+        st.write(data.describe(include='all'))
+        st.write("Valeurs manquantes par colonne :")
+        st.write(data.isnull().sum())
+        st.write("Corrélations entre variables :")
+        fig, ax = plt.subplots(figsize=(10, 6))
+        sns.heatmap(data.corr(), annot=True, cmap="coolwarm", ax=ax)
         st.pyplot(fig)
+    else:
+        st.warning("Veuillez charger les données dans la section précédente.")
+
+# Préparation des données
+if menu == "Préparation des données":
+    st.header("Préparation des données pour la modélisation")
+    if 'data' in st.session_state:
+        data = st.session_state['data']
+        target = st.selectbox("Sélectionnez la variable cible (y)", data.columns)
+        features = st.multiselect("Sélectionnez les variables explicatives (X)", data.columns)
+        if target and features:
+            X = pd.get_dummies(data[features], drop_first=True)
+            y = data[target].map({'OUI': 1, 'NON': 0})  # Adapter selon vos données
+            X = X.fillna(0)  # Remplir les valeurs manquantes par 0
+            y = y.fillna(0)
+            X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+            st.session_state['X_train'] = X_train
+            st.session_state['X_test'] = X_test
+            st.session_state['y_train'] = y_train
+            st.session_state['y_test'] = y_test
+            st.success("Données préparées avec succès.")
+            st.write("Aperçu des données d'entraînement :")
+            st.write(X_train.head())
+        else:
+            st.warning("Veuillez sélectionner la cible et les variables explicatives.")
+    else:
+        st.warning("Veuillez charger les données dans la section précédente.")
+
+# Modélisation et comparaison
+if menu == "Modélisation et comparaison":
+    st.header("Modélisation et comparaison des modèles")
+    if 'X_train' in st.session_state and 'y_train' in st.session_state:
+        X_train = st.session_state['X_train']
+        X_test = st.session_state['X_test']
+        y_train = st.session_state['y_train']
+        y_test = st.session_state['y_test']
+
+        # Régression logistique
+        log_model = LogisticRegression()
+        log_model.fit(X_train, y_train)
+        y_pred_log = log_model.predict(X_test)
+        st.session_state['log_model'] = log_model
+
+        # Forêt aléatoire
+        rf_model = RandomForestClassifier(n_estimators=100, random_state=42)
+        rf_model.fit(X_train, y_train)
+        y_pred_rf = rf_model.predict(X_test)
+        st.session_state['rf_model'] = rf_model
+
+        # Résultats
+        st.subheader("Résultats - Régression Logistique")
+        st.text(classification_report(y_test, y_pred_log))
+        st.subheader("Résultats - Forêt Aléatoire")
+        st.text(classification_report(y_test, y_pred_rf))
+    else:
+        st.warning("Veuillez préparer les données avant de continuer.")
+
+# Courbes ROC et déploiement
+if menu == "Courbes ROC et déploiement":
+    st.header("Courbes ROC et comparaison finale")
+    if 'X_test' in st.session_state and 'y_test' in st.session_state:
+        if 'log_model' in st.session_state and 'rf_model' in st.session_state:
+            X_test = st.session_state['X_test']
+            y_test = st.session_state['y_test']
+            log_model = st.session_state['log_model']
+            rf_model = st.session_state['rf_model']
+
+            # ROC - Régression Logistique
+            y_prob_log = log_model.predict_proba(X_test)[:, 1]
+            fpr_log, tpr_log, _ = roc_curve(y_test, y_prob_log)
+            roc_auc_log = auc(fpr_log, tpr_log)
+
+            # ROC - Forêt Aléatoire
+            y_prob_rf = rf_model.predict_proba(X_test)[:, 1]
+            fpr_rf, tpr_rf, _ = roc_curve(y_test, y_prob_rf)
+            roc_auc_rf = auc(fpr_rf, tpr_rf)
+
+            # Tracer les courbes ROC
+            fig, ax = plt.subplots()
+            ax.plot(fpr_log, tpr_log, label=f"Régression Logistique (AUC = {roc_auc_log:.2f})", color="blue")
+            ax.plot(fpr_rf, tpr_rf, label=f"Forêt Aléatoire (AUC = {roc_auc_rf:.2f})", color="green")
+            ax.plot([0, 1], [0, 1], 'k--', label="Aléatoire (AUC = 0.50)", color="red")
+            ax.set_xlabel("Taux de Faux Positifs (FPR)")
+            ax.set_ylabel("Taux de Vrais Positifs (TPR)")
+            ax.legend()
+            st.pyplot(fig)
+        else:
+            st.warning("Veuillez entraîner les modèles avant de continuer.")
+    else:
+        st.warning("Veuillez préparer les données avant de continuer.")
