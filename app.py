@@ -4,7 +4,7 @@ import numpy as np
 import streamlit as st
 import matplotlib.pyplot as plt
 import seaborn as sns
-from sklearn.model_selection import train_test_split, cross_val_score
+from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import classification_report, roc_curve, auc, confusion_matrix
@@ -17,9 +17,9 @@ menu = st.sidebar.radio("Étapes", [
     "Chargement des données",
     "Analyse descriptive",
     "Préparation des données",
-    "Modélisation et validation croisée",
-    "Prédictions finales",
-    "Recommandations pratiques"
+    "Modélisation et comparaison",
+    "Prédictions pour nouveaux patients",
+    "Courbes ROC et recommandations"
 ])
 
 # Section : Chargement des données
@@ -45,12 +45,31 @@ if menu == "Analyse descriptive":
     if 'data' in st.session_state:
         data = st.session_state['data']
 
-        # Conversion des données textuelles en numériques
+        # Colonnes binaires et traitement spécial
+        colonnes_binaires = [
+            'SEXE', 'Hypertension Arterielle', 'Diabete', 'Cardiopathie',
+            'hémiplégie', 'Paralysie faciale', 'Aphasie', 'Hémiparésie',
+            'Engagement Cerebral', 'Inondation Ventriculaire', 'Evolution'
+        ]
+        colonne_traitement = 'Traitement'
+
+        # Remplacer les valeurs textuelles par des valeurs numériques
         data = data.replace({
             'OUI': 1, 'NON': 0, 'Homme': 1, 'Femme': 0,
             'Deces': 1, 'Vivant': 0, 'Thrombolyse': 1, 'Chirurgie': 2
         })
-        data = data.fillna(0)  # Remplacer les valeurs manquantes par 0
+
+        # Forcer les colonnes binaires à être 0 ou 1
+        for col in colonnes_binaires:
+            if col in data.columns:
+                data[col] = data[col].apply(lambda x: 1 if x == 1 else 0).fillna(0)
+
+        # Forcer "Traitement" à être 1 ou 2
+        if colonne_traitement in data.columns:
+            data[colonne_traitement] = data[colonne_traitement].apply(
+                lambda x: 1 if x == 1 else 2
+            ).fillna(1)
+
         st.session_state['data'] = data
 
         # Résumé statistique
@@ -72,16 +91,6 @@ if menu == "Analyse descriptive":
         ax2.set_title("Distribution des âges")
         ax2.set_xlabel("Âge")
         st.pyplot(fig2)
-
-        # Corrélations
-        numeric_data = data.select_dtypes(include=[np.number])
-        if not numeric_data.empty:
-            st.write("Matrice de corrélation :")
-            fig3, ax3 = plt.subplots(figsize=(10, 6))
-            sns.heatmap(numeric_data.corr(), annot=True, cmap="coolwarm", ax=ax3)
-            st.pyplot(fig3)
-        else:
-            st.warning("Aucune colonne numérique disponible pour calculer la corrélation.")
     else:
         st.warning("Veuillez charger les données dans la section précédente.")
 
@@ -116,46 +125,51 @@ if menu == "Préparation des données":
             st.session_state['y_test'] = y_test
 
             st.success("Données préparées avec succès.")
-            st.write("Aperçu des données d'entraînement :", X_train.head())
         else:
             st.warning("Veuillez sélectionner la cible et les variables explicatives.")
     else:
         st.warning("Veuillez charger les données dans la section précédente.")
 
-# Section : Modélisation et validation croisée
-if menu == "Modélisation et validation croisée":
-    st.header("Modélisation et validation croisée")
+# Section : Modélisation et comparaison
+if menu == "Modélisation et comparaison":
+    st.header("Modélisation et comparaison des modèles")
     if 'X_train' in st.session_state and 'y_train' in st.session_state:
         X_train = st.session_state['X_train']
+        X_test = st.session_state['X_test']
         y_train = st.session_state['y_train']
+        y_test = st.session_state['y_test']
 
         # Modèle de régression logistique
         log_model = LogisticRegression()
-        scores_log = cross_val_score(log_model, X_train, y_train, cv=5, scoring='accuracy')
-        st.write(f"Validation croisée - Régression Logistique : {scores_log.mean():.2f} ± {scores_log.std():.2f}")
         log_model.fit(X_train, y_train)
+        y_pred_log = log_model.predict(X_test)
+        st.session_state['log_model'] = log_model
 
         # Modèle de forêt aléatoire
         rf_model = RandomForestClassifier(n_estimators=100, random_state=42)
-        scores_rf = cross_val_score(rf_model, X_train, y_train, cv=5, scoring='accuracy')
-        st.write(f"Validation croisée - Forêt Aléatoire : {scores_rf.mean():.2f} ± {scores_rf.std():.2f}")
         rf_model.fit(X_train, y_train)
-
-        # Stocker les modèles
-        st.session_state['log_model'] = log_model
+        y_pred_rf = rf_model.predict(X_test)
         st.session_state['rf_model'] = rf_model
+
+        # Afficher les résultats
+        st.subheader("Régression Logistique")
+        st.text(classification_report(y_test, y_pred_log))
+
+        st.subheader("Forêt Aléatoire")
+        st.text(classification_report(y_test, y_pred_rf))
     else:
         st.warning("Veuillez préparer les données avant de continuer.")
 
-# Section : Prédictions finales
-if menu == "Prédictions finales":
-    st.header("Prédictions finales pour de nouveaux patients")
-    if 'rf_model' in st.session_state:
+# Section : Prédictions pour nouveaux patients
+if menu == "Prédictions pour nouveaux patients":
+    st.header("Prédictions pour nouveaux patients")
+    if 'rf_model' in st.session_state and 'X_test' in st.session_state:
         rf_model = st.session_state['rf_model']
-        X_test = st.session_state['X_test']
+        feature_names = st.session_state['X_test'].columns
 
-        st.subheader("Entrez les caractéristiques du patient pour prédiction")
-        input_data = {col: st.number_input(f"{col}", value=float(X_test[col].mean())) for col in X_test.columns}
+        # Interface utilisateur pour entrer les caractéristiques du patient
+        st.subheader("Entrez les caractéristiques du patient :")
+        input_data = {feature: st.number_input(f"{feature}", value=0.0) for feature in feature_names}
         input_df = pd.DataFrame([input_data])
 
         # Prédiction
@@ -164,15 +178,46 @@ if menu == "Prédictions finales":
         st.write(f"Prédiction : {'Décès (1)' if prediction[0] == 1 else 'Vivant (0)'}")
         st.write(f"Probabilité de décès : {probas[0]:.2f}")
     else:
-        st.warning("Veuillez entraîner les modèles avant de continuer.")
+        st.warning("Veuillez entraîner le modèle avant d'effectuer des prédictions.")
 
-# Section : Recommandations pratiques
-if menu == "Recommandations pratiques":
-    st.header("Recommandations pratiques")
-    st.write("""
-    - Pour réduire le risque de décès, privilégiez les traitements ayant montré une efficacité élevée dans les modèles.
-    - Analysez les caractéristiques des patients pour ajuster les traitements, comme :
-        - Type de traitement (Thrombolyse ou Chirurgie).
-        - Surveillance étroite pour les patients présentant des signes de gravité.
-    - Intégrez les prédictions pour optimiser les décisions cliniques.
-    """)
+# Section : Courbes ROC et recommandations
+if menu == "Courbes ROC et recommandations":
+    st.header("Courbes ROC et recommandations pratiques")
+    if 'X_test' in st.session_state and 'y_test' in st.session_state:
+        if 'log_model' in st.session_state and 'rf_model' in st.session_state:
+            X_test = st.session_state['X_test']
+            y_test = st.session_state['y_test']
+            log_model = st.session_state['log_model']
+            rf_model = st.session_state['rf_model']
+
+            # Courbe ROC - Régression Logistique
+            y_prob_log = log_model.predict_proba(X_test)[:, 1]
+            fpr_log, tpr_log, _ = roc_curve(y_test, y_prob_log)
+            roc_auc_log = auc(fpr_log, tpr_log)
+
+            # Courbe ROC - Forêt Aléatoire
+            y_prob_rf = rf_model.predict_proba(X_test)[:, 1]
+            fpr_rf, tpr_rf, _ = roc_curve(y_test, y_prob_rf)
+            roc_auc_rf = auc(fpr_rf, tpr_rf)
+
+            # Tracer les courbes ROC
+            fig, ax = plt.subplots()
+            ax.plot(fpr_log, tpr_log, label=f"Régression Logistique (AUC = {roc_auc_log:.2f})", color="blue")
+            ax.plot(fpr_rf, tpr_rf, label=f"Forêt Aléatoire (AUC = {roc_auc_rf:.2f})", color="green")
+            ax.plot([0, 1], [0, 1], 'k--', label="Modèle aléatoire (AUC = 0.50)", color="red")
+            ax.set_xlabel("Taux de faux positifs (FPR)")
+            ax.set_ylabel("Taux de vrais positifs (TPR)")
+            ax.legend()
+            st.pyplot(fig)
+
+            # Recommandations pratiques
+            st.subheader("Recommandations pratiques")
+            st.write("""
+            - Pour réduire le risque de décès, privilégiez les traitements ayant montré une efficacité élevée.
+            - Ajustez les traitements selon les caractéristiques des patients (âge, conditions médicales, etc.).
+            - Intégrez les prédictions dans la prise de décision clinique.
+            """)
+        else:
+            st.warning("Veuillez entraîner les modèles avant de continuer.")
+    else:
+        st.warning("Veuillez préparer les données avant de continuer.")
