@@ -22,23 +22,20 @@ menu = st.sidebar.radio("Étapes", [
     "Courbes ROC et recommandations"
 ])
 
-# Section : Chargement des données
-if menu == "Chargement des données":
-    st.header("Chargement des données")
-    uploaded_file = st.file_uploader("Téléversez un fichier Excel", type=["xlsx"])
-    if uploaded_file:
-        try:
-            # Charger les données
-            
-            data = pd.read_excel("Donnnées_Projet_M2SID2023_2024.xlsx", header=0)
-            st.success("Base de données chargée avec succès !")
-            st.write("Aperçu des données :", data.head())
-            st.write(f"Dimensions des données : {data.shape}")
+ # Chargement de la base intégrée
+st.header("Chargement de la base de données")
+try:
+    # Charger directement la base intégrée
+    data = pd.read_excel("base_projet.xlsx", header=0)
+    st.success("Base de données chargée avec succès !")
+    st.write("Aperçu des données :", data.head())
+    st.write(f"Dimensions des données : {data.shape}")
 
-            # Stocker les données dans la session
-            st.session_state['data'] = data
-            except Exception as e:
-            st.error(f"Erreur lors du chargement de la base de données : {e}")
+    # Stocker les données dans la session
+    st.session_state['data'] = data
+except Exception as e:
+    st.error(f"Erreur lors du chargement de la base de données : {e}")
+
 
 # Section : Analyse descriptive
 if menu == "Analyse descriptive":
