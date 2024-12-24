@@ -83,15 +83,12 @@ if menu == "Analyse descriptive":
         ax2.set_ylabel("Nombre de patients")
         ax2.legend(title="Évolution", labels=["Vivant (0)", "Décès (1)"])
         st.pyplot(fig1)
-
-        # Visualisation : Répartition des sexes par évolution (Vivant ou Décès)
-        st.subheader("Répartition des sexes par évolution")
-        fig2, ax = plt.subplots()
-        sns.countplot(x='SEXE', hue='Evolution', data=data, ax=ax)
-        ax.set_title("Répartition des sexes par évolution")
-        ax.set_xlabel("Sexe (0 = Femme, 1 = Homme)")
-        ax.set_ylabel("Nombre de patients")
-        ax.legend(title="Évolution", labels=["Vivant (0)", "Décès (1)"])
+       # Visualisation : Distribution des âges
+        st.subheader("Distribution des âges")
+        fig2, ax2 = plt.subplots()
+        sns.histplot(data['AGE'], kde=True, ax=ax2)
+        ax2.set_title("Distribution des âges")
+        ax2.set_xlabel("Âge")
         st.pyplot(fig2)
     else:
         st.warning("Veuillez charger les données dans la section précédente.")
