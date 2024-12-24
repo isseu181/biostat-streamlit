@@ -212,7 +212,6 @@ if menu == "Courbes ROC ":
             y_test = st.session_state['y_test']
             log_model = st.session_state['log_model']
             rf_model = st.session_state['rf_model']
-
             # Courbe ROC - Régression Logistique
             y_prob_log = log_model.predict_proba(X_test)[:, 1]
             fpr_log, tpr_log, _ = roc_curve(y_test, y_prob_log)
