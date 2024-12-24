@@ -203,15 +203,16 @@ if menu == "Prédictions pour nouveaux patients":
     else:
         st.warning("Veuillez entraîner le modèle avant d'effectuer des prédictions.")
 
-# Section : Courbes ROC 
-if menu == "Courbes ROC ":
-    st.header("Courbes ROC")
+# Section : Courbes ROC et recommandations
+if menu == "Courbes ROC et recommandations":
+    st.header("Courbes ROC et recommandations pratiques")
     if 'X_test' in st.session_state and 'y_test' in st.session_state:
         if 'log_model' in st.session_state and 'rf_model' in st.session_state:
             X_test = st.session_state['X_test']
             y_test = st.session_state['y_test']
             log_model = st.session_state['log_model']
             rf_model = st.session_state['rf_model']
+
             # Courbe ROC - Régression Logistique
             y_prob_log = log_model.predict_proba(X_test)[:, 1]
             fpr_log, tpr_log, _ = roc_curve(y_test, y_prob_log)
@@ -232,6 +233,13 @@ if menu == "Courbes ROC ":
             ax.legend()
             st.pyplot(fig)
 
+            # Recommandations pratiques
+            st.subheader("Recommandations pratiques")
+            st.write("""
+            - Pour réduire le risque de décès, privilégiez les traitements ayant montré une efficacité élevée.
+            - Ajustez les traitements selon les caractéristiques des patients (âge, conditions médicales, etc.).
+            - Intégrez les prédictions dans la prise de décision clinique.
+            """)
         else:
             st.warning("Veuillez entraîner les modèles avant de continuer.")
     else:
