@@ -74,16 +74,17 @@ if menu == "Analyse descriptive":
         st.write("Résumé statistique des données :")
         st.write(data.describe(include='all'))
 
-        # Visualisation : Répartition des traitements par évolution (décès ou vivant)
+        # Visualisation : Répartition des traitements par évolution
         st.subheader("Répartition des traitements par évolution")
-        fig1, ax2 = plt.subplots()
-        sns.countplot(x='Traitement', hue='Evolution', data=data, ax=ax2)
-        ax2.set_title("Répartition des traitements par évolution")
-        ax2.set_xlabel("Type de traitement (1 = Thrombolyse, 2 = Chirurgie)")
-        ax2.set_ylabel("Nombre de patients")
-        ax2.legend(title="Évolution", labels=["Vivant (0)", "Décès (1)"])
+        fig1, ax1 = plt.subplots()
+        sns.countplot(x='Traitement', hue='Evolution', data=data, ax=ax1)
+        ax1.set_title("Répartition des traitements par évolution")
+        ax1.set_xlabel("Type de traitement (1 = Thrombolyse, 2 = Chirurgie)")
+        ax1.set_ylabel("Nombre de patients")
+        ax1.legend(title="Évolution", labels=["Vivant (0)", "Décès (1)"])
         st.pyplot(fig1)
-       # Visualisation : Distribution des âges
+
+        # Visualisation : Distribution des âges
         st.subheader("Distribution des âges")
         fig2, ax2 = plt.subplots()
         sns.histplot(data['AGE'], kde=True, ax=ax2)
@@ -168,7 +169,30 @@ if menu == "Prédictions pour nouveaux patients":
 
         # Interface utilisateur pour entrer les caractéristiques du patient
         st.subheader("Entrez les caractéristiques du patient :")
-        input_data = {feature: st.number_input(f"{feature}", value=0.0) for feature in feature_names}
+        input_data = {}
+
+        # Colonnes avec des choix fixes
+        choix_binaires = {
+            'SEXE': [0, 1],  # 0 = Femme, 1 = Homme
+            'Hypertension Arterielle': [0, 1],
+            'Diabete': [0, 1],
+            'Cardiopathie': [0, 1],
+            'hémiplégie': [0, 1],
+            'Paralysie faciale': [0, 1],
+            'Aphasie': [0, 1],
+            'Hémiparésie': [0, 1],
+            'Engagement Cerebral': [0, 1],
+            'Inondation Ventriculaire': [0, 1],
+            'Traitement': [1, 2]  # 1 = Thrombolyse, 2 = Chirurgie
+        }
+
+        # Générer l'interface utilisateur
+        for feature in feature_names:
+            if feature in choix_binaires:
+                input_data[feature] = st.selectbox(f"{feature} (Choisissez une option)", choix_binaires[feature])
+            else:
+                input_data[feature] = st.number_input(f"{feature}", value=0.0)
+
         input_df = pd.DataFrame([input_data])
 
         # Prédiction
